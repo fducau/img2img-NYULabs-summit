@@ -152,8 +152,8 @@ class netModel(BaseModel):
 
     def backward_G(self):
         # First, G(A) should fake the discriminator
-        #pred_fake = self.netD.forward(self.sr)
-        #self.loss_G_GAN = self.criterionGAN(pred_fake, True)
+        pred_fake = self.netD.forward(self.sr)
+        self.loss_G_GAN = self.criterionGAN(pred_fake, True)
 
         # Second, G(A) = B
         self.loss_G_content = self.content_loss(self.sr, self.hr)
@@ -165,29 +165,29 @@ class netModel(BaseModel):
         # st()
         self.forward()
 
-        #self.optimizer_D.zero_grad()
-        #self.backward_D()
-        #self.optimizer_D.step()
+        self.optimizer_D.zero_grad()
+        self.backward_D()
+        self.optimizer_D.step()
 
         self.optimizer_G.zero_grad()
         self.backward_G()
         self.optimizer_G.step()
 
     def get_current_errors(self):
-        #return OrderedDict([('G_GAN', self.loss_G_GAN.data[0]),
-        #        ('G_L1', self.loss_G_content.data[0]),
-        #        ('D_real', self.loss_D_real.data[0]),
-        #        ('D_fake', self.loss_D_fake.data[0])
-        #])
+        return OrderedDict([('G_GAN', self.loss_G_GAN.data[0]),
+                ('G_L1', self.loss_G_content.data[0]),
+                ('D_real', self.loss_D_real.data[0]),
+                ('D_fake', self.loss_D_fake.data[0])
+        ])
 
-        return OrderedDict([('G_L1', self.loss_G_content.data[0]),
-                        ])
+        #return OrderedDict([('G_L1', self.loss_G_content.data[0]),
+        #                 ])
 
 
     def get_current_visuals(self):
-        #fake_in = util.tensor2im(self.fake_in.data)
-        #fake_out = util.tensor2im(self.fake_out.data)
-        #real_out = util.tensor2im(self.real_out.data)
+        fake_in = util.tensor2im(self.fake_in.data)
+        fake_out = util.tensor2im(self.fake_out.data)
+        real_out = util.tensor2im(self.real_out.data)
         return OrderedDict([('fake_in', self.lr),
                             ('fake_out', self.sr),
                             ('real_out', self.hr)])

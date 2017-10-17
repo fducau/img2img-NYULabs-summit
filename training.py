@@ -176,14 +176,14 @@ for epoch in range(opt.niter):
 
         if total_steps % opt.print_freq == 0:
             errors = model.get_current_errors()
-            #print('[{}/{}] Epoch: {}, G_GAN: {:.4f}, G_L1: {:.4f}, D_real: {:.4f}, D_fake: {:.4f}'.format(
-            #      epoch_iter, total_steps, epoch,
-            #      errors['G_GAN'], errors['G_L1'], errors['D_real'],
-            #      errors['D_fake']))
-
-            print('[{}/{}] Epoch: {}, G_L1: {:.4f}'.format(
+            print('[{}/{}] Epoch: {}, G_GAN: {:.4f}, G_L1: {:.4f}, D_real: {:.4f}, D_fake: {:.4f}'.format(
                   epoch_iter, total_steps, epoch,
-                  errors['G_L1']))
+                  errors['G_GAN'], errors['G_L1'], errors['D_real'],
+                  errors['D_fake']))
+
+            # print('[{}/{}] Epoch: {}, G_L1: {:.4f}'.format(
+            #       epoch_iter, total_steps, epoch,
+            #       errors['G_L1']))
 
 
             # do checkpointing
