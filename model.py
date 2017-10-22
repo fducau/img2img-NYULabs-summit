@@ -72,8 +72,6 @@ class netModel(BaseModel):
                                    opt.B_height, opt.B_width)
         self.input_A = self.Tensor(opt.batchSize, opt.output_nc,
                                    opt.A_height, opt.A_width)
-        self.input_adv = self.Tensor(opt.batchSize, opt.input_nc,
-                                     opt.B_height, opt.B_width)
 
         # load/define networks
         self.netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf,
@@ -106,35 +104,36 @@ class netModel(BaseModel):
     def set_input(self, input):
         if self.train_mode:
             input_B = input[0][0]
-            input_adv = input[1][0]
-            input_A = input[2][0]
+            input_A = input[1][0]
 
             self.input_B.resize_(input_B.size()).copy_(input_B)
-            self.input_adv.resize_(input_adv.size()).copy_(input_adv)
             self.input_A.resize_(input_A.size()).copy_(input_A)
+
         else:
             input_A = input[0][0]
             self.input_A.resize_(input_A.size()).copy_(input_A)
 
     def forward(self):
         if self.train_mode:
-            self.A = Variable(self.input_A)
-            self.B_fake = self.netG.forward(self.A)
-            self.B = Variable(self.input_B)
-            self.adv = Variable(self.input_adv)
+            self.real_A = Variable(self.input_A)
+            self.fake_B = self.netG.forward(self.real_A)
+            self.real_B = Variable(self.input_B)
         else:
             # Do not backprop gradients
-            self.A = Variable(self.input_A, volatile=True)
-            self.B_fake = self.netG.forward(self.A)
+            self.real_A = Variable(self.input_A, volatile=True)
+            self.fake_B = self.netG.forward(self.A)
 
     def backward_D(self):
         # stop backprop to the generator by detaching fake_B
-        self.pred_fake = self.netD.forward(self.B_fake.detach())
+        fake_AB = torch.cat((self.real_A, self.fake_B), 1)
+        self.pred_fake = self.netD.forward(fake_AB.detach())
+
         self.loss_D_fake = self.criterionGAN(self.pred_fake, False)
         self.loss_D_fake.backward()
 
         # Real
-        self.pred_real = self.netD.forward(self.adv)
+        real_AB = torch.cat((self.real_A, self.real_B), 1)
+        self.pred_real = self.netD.forward(real_AB)
         self.loss_D_real = self.criterionGAN(self.pred_real, True)
         self.loss_D_real.backward()
         # Combined loss
@@ -142,11 +141,12 @@ class netModel(BaseModel):
 
     def backward_G(self):
         # First, G(A) should fake the discriminator
-        pred_fake = self.netD.forward(self.B_fake)
+        fake_AB = torch.cat((self.real_A, self.fake_B), 1)
+        pred_fake = self.netD.forward(fake_AB)
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
 
         # Second, G(A) = B
-        self.loss_G_content = self.content_loss(self.B_fake, self.B)
+        self.loss_G_content = self.content_loss(self.fake_B, self.real_B)
         self.loss_G = self.loss_G_content + self.loss_G_GAN * self.opt.L1lambda
 
         self.loss_G.backward()
@@ -180,11 +180,11 @@ class netModel(BaseModel):
         # fake_out = util.tensor2im(self.fake_out.data)
         # real_out = util.tensor2im(self.real_out.data)
         if test or not self.test_mode:
-            return OrderedDict('fake_out', self.B_fake)
+            return OrderedDict('fake_out', self.fake_B)
 
-        return OrderedDict([('fake_in', self.A),
-                            ('fake_out', self.B_fake),
-                            ('real_out', self.B)])
+        return OrderedDict([('fake_in', self.real_A),
+                            ('fake_out', self.fake_B),
+                            ('real_out', self.real_B)])
 
     def update_learning_rate(self):
         lr = self.old_lr / 10.
