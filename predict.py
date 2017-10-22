@@ -28,7 +28,7 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--transform_path', help='path to dataset', default='./data/test/faces/')
+parser.add_argument('--transform_path', help='path to dataset', default='./data/test/edges/')
 parser.add_argument('--reload_model', help='model to be used for prediction')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
@@ -88,7 +88,7 @@ if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
 # folder dataset
-dataset_transform = dset.ImageFolder(root=opt.dataroot_hr,
+dataset_transform = dset.ImageFolder(root=opt.transform_path,
                                 transform=transforms.Compose([
                                     transforms.ToTensor(),
                                     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
@@ -102,12 +102,11 @@ model = netModel()
 model.initialize(opt)
 print("model was created")
 
-if os.path.isfile(opt.transform_path):
-    print("=> loading checkpoint '{}'".format(opt.transform_path))
+if os.path.isfile(opt.reload_model):
+    print("=> loading checkpoint '{}'".format(opt.reload_model))
     checkpoint = torch.load(opt.reload_model)
-    model.load_state_dict(checkpoint['state_dict'])
-    print("=> loaded checkpoint '{}' (epoch {})"
-          .format(opt.reload_model, checkpoint['epoch']))
+    model.netG.load_state_dict(checkpoint)
+    print("=> loaded checkpoint {}".format(opt.reload_model))
 else:
     print("=> no checkpoint found at '{}'".format(opt.resume))
 

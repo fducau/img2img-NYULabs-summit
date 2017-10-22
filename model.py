@@ -131,8 +131,8 @@ class netModel(BaseModel):
     def test(self):
         self.lr = Variable(self.input_lr, volatile=True)
         self.sr = self.netG.forward(self.lr)
-        self.hr = Variable(self.input_hr, volatile=True)
-        self.hr_adv = Variable(self.input_hr_adv, volatile=True)
+        # self.hr = Variable(self.input_hr, volatile=True)
+        # self.hr_adv = Variable(self.input_hr_adv, volatile=True)
 
     # get image paths
     def get_image_paths(self):
@@ -184,10 +184,13 @@ class netModel(BaseModel):
         #                 ])
 
 
-    def get_current_visuals(self):
+    def get_current_visuals(self, test=False):
         # fake_in = util.tensor2im(self.fake_in.data)
         # fake_out = util.tensor2im(self.fake_out.data)
         # real_out = util.tensor2im(self.real_out.data)
+        if test:
+            return OrderedDict('fake_out', self.sr)
+
         return OrderedDict([('fake_in', self.lr),
                             ('fake_out', self.sr),
                             ('real_out', self.hr)])
