@@ -68,33 +68,30 @@ class netModel(BaseModel):
     def name(self):
         return 'netModel'
 
-    def initialize(self, opt):
+    def initialize(self, opt, train_mode=True):
+        # Model transforms from A --> B and uses Adv as the
+        # adversarial example.
         BaseModel.initialize(self, opt)
-        self.isTrain = True
+        self.train_mode = train_mode
         # define tensors
-        self.input_hr = self.Tensor(opt.batchSize, opt.input_nc,
-                                    opt.hr_height, opt.hr_width)
-        self.input_lr = self.Tensor(opt.batchSize, opt.output_nc,
-                                    opt.lr_height, opt.lr_width)
-        self.input_hr_adv = self.Tensor(opt.batchSize, opt.input_nc,
-                                        opt.hr_height, opt.hr_width)
+        self.input_B = self.Tensor(opt.batchSize, opt.input_nc,
+                                   opt.B_height, opt.B_width)
+        self.input_A = self.Tensor(opt.batchSize, opt.output_nc,
+                                   opt.A_height, opt.A_width)
+        self.input_adv = self.Tensor(opt.batchSize, opt.input_nc,
+                                     opt.B_height, opt.B_width)
 
         # load/define networks
         self.netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf,
                                       opt.norm, self.gpu_ids)
 
-        if self.isTrain:
+        if self.train_mode:
             use_sigmoid = opt.no_lsgan
             self.netD = networks.define_D(opt.output_nc, opt.ndf,
-                                         opt.which_model_netD,
-                                         opt.n_layers_D, use_sigmoid, self.gpu_ids)
+                                          opt.which_model_netD,
+                                          opt.n_layers_D, use_sigmoid, self.gpu_ids)
 
-        #if not self.isTrain or opt.continue_train:
-        #    self.load_network(self.netG, 'G', opt.which_epoch)
-        #    if self.isTrain:
-        #        self.load_network(self.netD, 'D', opt.which_epoch)
-
-        if self.isTrain:
+        if self.train_mode:
             # self.fake_AB_pool = ImagePool(opt.pool_size)
             self.old_lr = opt.lr
             # define loss functions
@@ -113,38 +110,37 @@ class netModel(BaseModel):
             print('-----------------------------------------------')
 
     def set_input(self, input):
-        input_hr = input[0][0]
-        input_hr_adv = input[1][0]
-        input_lr = input[2][0]
+        if self.train_mode:
+            input_B = input[0][0]
+            input_adv = input[1][0]
+            input_A = input[2][0]
 
-        self.input_hr.resize_(input_hr.size()).copy_(input_hr)
-        self.input_hr_adv.resize_(input_hr_adv.size()).copy_(input_hr_adv)
-        self.input_lr.resize_(input_lr.size()).copy_(input_lr)
+            self.input_B.resize_(input_B.size()).copy_(input_B)
+            self.input_adv.resize_(input_adv.size()).copy_(input_adv)
+            self.input_A.resize_(input_A.size()).copy_(input_A)
+        else:
+            input_A = input[0][0]
+            self.input_A.resize_(input_A.size()).copy_(input_A)
 
     def forward(self):
-        self.lr = Variable(self.input_lr)
-        self.sr = self.netG.forward(self.lr)
-        self.hr = Variable(self.input_hr)
-        self.hr_adv = Variable(self.input_hr_adv)
-
-    # no backprop gradients
-    def test(self):
-        self.lr = Variable(self.input_lr, volatile=True)
-        self.sr = self.netG.forward(self.lr)
-        # self.hr = Variable(self.input_hr, volatile=True)
-        # self.hr_adv = Variable(self.input_hr_adv, volatile=True)
-
-    # get image paths
-    def get_image_paths(self):
-        return self.image_paths
+        if self.train_mode:
+            self.A = Variable(self.input_A)
+            self.B_fake = self.netG.forward(self.A)
+            self.B = Variable(self.B)
+            self.adv = Variable(self.input_adv)
+        else:
+            # Do not backprop gradients
+            self.A = Variable(self.input_A, volatile=True)
+            self.B_fake = self.netG.forward(self.A)
 
     def backward_D(self):
         # stop backprop to the generator by detaching fake_B
-        self.pred_fake = self.netD.forward(self.sr.detach())
+        self.pred_fake = self.netD.forward(self.B_fake.detach())
         self.loss_D_fake = self.criterionGAN(self.pred_fake, False)
         self.loss_D_fake.backward()
+
         # Real
-        self.pred_real = self.netD.forward(self.hr_adv)
+        self.pred_real = self.netD.forward(self.adv)
         self.loss_D_real = self.criterionGAN(self.pred_real, True)
         self.loss_D_real.backward()
         # Combined loss
@@ -152,19 +148,20 @@ class netModel(BaseModel):
 
     def backward_G(self):
         # First, G(A) should fake the discriminator
-        pred_fake = self.netD.forward(self.sr)
+        pred_fake = self.netD.forward(self.B_fake)
         self.loss_G_GAN = self.criterionGAN(pred_fake, True)
 
         # Second, G(A) = B
-        self.loss_G_content = self.content_loss(self.sr, self.hr)
-        self.loss_G = self.loss_G_content #+ self.loss_G_GAN * self.opt.L1lambda
+        self.loss_G_content = self.content_loss(self.B_fake, self.B)
+        self.loss_G = self.loss_G_content + self.loss_G_GAN * self.opt.L1lambda
 
         self.loss_G.backward()
 
     def optimize_parameters(self):
-        # st()
+        '''
+        Run forward and backward pathds and apply optimization step
+        '''
         self.forward()
-
         self.optimizer_D.zero_grad()
         self.backward_D()
         self.optimizer_D.step()
@@ -189,11 +186,11 @@ class netModel(BaseModel):
         # fake_out = util.tensor2im(self.fake_out.data)
         # real_out = util.tensor2im(self.real_out.data)
         if test:
-            return OrderedDict('fake_out', self.sr)
+            return OrderedDict('fake_out', self.B_fake)
 
-        return OrderedDict([('fake_in', self.lr),
-                            ('fake_out', self.sr),
-                            ('real_out', self.hr)])
+        return OrderedDict([('fake_in', self.A),
+                            ('fake_out', self.B_fake),
+                            ('real_out', self.B)])
 
     def save(self, label):
         self.save_network(self.netG, 'G', label, self.gpu_ids)

@@ -25,12 +25,13 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
+import pickle as pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--dataroot_hr', help='path to dataset', default='./data/train/faces/')
-parser.add_argument('--dataroot_hr_adv', help='path to dataset', default='./data/train/adversarial/')
-parser.add_argument('--dataroot_lr', help='path to dataset', default='./data/train/edges')
+parser.add_argument('--dataroot_faces', help='path to dataset', default='./data/train/faces/')
+parser.add_argument('--dataroot_adv', help='path to dataset', default='./data/train/adversarial/')
+parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/train/edges')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
 parser.add_argument('--batchSize', type=int, default=6, help='input batch size')
@@ -63,7 +64,7 @@ parser.add_argument('--which_model_netD', type=str, default='basic', help='selec
 parser.add_argument('--norm', type=str, default='batch', help='batch normalization or instance normalization')
 parser.add_argument('--n_layers_D', type=int, default=3, help='only used if which_model_netD==n_layers')
 parser.add_argument('--display_freq', type=int, default=100, help='Save images frequency')
-parser.add_argument('--print_freq', type=int, default=10, help='Screen output frequency')
+parser.add_argument('--print_freq', type=int, default=50, help='Screen output frequency')
 
 opt = parser.parse_args()
 opt.no_lsgan = True
@@ -89,53 +90,47 @@ if torch.cuda.is_available() and not opt.cuda:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
 
-def pil_loader1(path):
-    image = Image.open(path).convert('RGB')
-    return_image = copy.deepcopy(image)
-    image.close()
-    return return_image
+# folder dataset
+dataset_faces = dset.ImageFolder(
+    root=opt.dataroot_faces,
+    transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+)
 
-def default_loader1(path):
-    img = plt.imread(path)
-    if len(img.shape) < 3:
-        img = img.reshape(tuple(list(img.shape) + [1]))
-        img = np.concatenate([img, img, img], 2)
-    if img.max() <= 1.:
-        img = img * 255.
-    img = img.astype('uint8')
-    img = Image.fromarray(img)
-    return img
-
+assert dataset_faces
+dataset_size = len(dataset_faces)
+dataloader_faces = torch.utils.data.DataLoader(dataset_faces,
+                                               batch_size=opt.batchSize,
+                                               shuffle=False,
+                                               num_workers=int(opt.workers))
 
 # folder dataset
-dataset_hr = dset.ImageFolder(root=opt.dataroot_hr,
-                                transform=transforms.Compose([
-                                    transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                ]))
-assert dataset_hr
-dataset_size = len(dataset_hr)
-dataloader_hr = torch.utils.data.DataLoader(dataset_hr, batch_size=opt.batchSize,
-                                              shuffle=False, num_workers=int(opt.workers))
+dataset_edges = dset.ImageFolder(
+    root=opt.dataroot_edges,
+    transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+)
 
-# folder dataset
-dataset_lr = dset.ImageFolder(root=opt.dataroot_lr,
-                                transform=transforms.Compose([
-                                    transforms.ToTensor(),
-                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-                                ]))
+dataset_adv = dset.ImageFolder(
+    root=opt.dataroot_adv,
+    transform=transforms.Compose([transforms.ToTensor()])
+)
 
-dataset_hr_adv = dset.ImageFolder(root=opt.dataroot_hr_adv,
-                                transform=transforms.Compose([
-                                    transforms.ToTensor(),
-                                ]))
-assert dataset_lr
-assert dataset_hr_adv
-dataloader_lr = torch.utils.data.DataLoader(dataset_lr, batch_size=opt.batchSize,
-                                              shuffle=False, num_workers=int(opt.workers))
+assert dataset_edges
+assert dataset_adv
+dataloader_edges = torch.utils.data.DataLoader(dataset_edges,
+                                               batch_size=opt.batchSize,
+                                               shuffle=False,
+                                               num_workers=int(opt.workers))
 
-dataloader_hr_adv = torch.utils.data.DataLoader(dataset_hr_adv, batch_size=opt.batchSize,
-                                                shuffle=True, num_workers=int(opt.workers))
+dataloader_adv = torch.utils.data.DataLoader(dataset_adv,
+                                             batch_size=opt.batchSize,
+                                             shuffle=True,
+                                             num_workers=int(opt.workers))
 model = netModel()
 model.initialize(opt)
 print("model was created")
@@ -143,21 +138,23 @@ print("model was created")
 
 # Create output folder
 if not os.path.isdir(opt.outf + opt.exp_name):
+    if not os.path.isdir(opt.outf):
+        os.mkdir(opt.outf)
     os.mkdir(opt.outf + opt.exp_name)
+
+pkl.dump(opt, open('{}/options_dictionary.pkl'.format(opt.outf + opt.exp_name), 'wb'))
 
 
 total_steps = 0
 for epoch in range(opt.niter):
     epoch_start_time = time.time()
-    i=-1
-    #for data, (data_fake, data_mask) in izip(dataloader_real, cycle(izip(iter(dataloader_fake), iter(dataloader_mask)))):
-    for data_hr, data_hr_adv, data_lr in izip(dataloader_hr, dataloader_hr_adv, dataloader_lr):
-        i+=1
+    i = -1
+    for data_faces, data_adv, data_edges in izip(dataloader_faces, dataloader_adv, dataloader_edges):
+        i += 1
         iter_start_time = time.time()
         total_steps += opt.batchSize
-        epoch_iter = total_steps - dataset_size * (epoch - 1)
 
-        model.set_input((data_hr, data_hr_adv, data_lr))
+        model.set_input((data_faces, data_adv, data_edges))
         model.optimize_parameters()
 
         if i % opt.display_freq == 0:
@@ -173,18 +170,13 @@ for epoch in range(opt.niter):
                               '%s/input_samples.png' % (opt.outf + opt.exp_name),
                               normalize=True)
 
-        if total_steps % opt.print_freq == 0:
+        if total_steps % (opt.print_freq * opt.batchSize) == 0:
             errors = model.get_current_errors()
             print('[{}/{}] Epoch: {}, G_GAN: {:.4f}, G_L1: {:.4f}, D_real: {:.4f}, D_fake: {:.4f}'.format(
-                  epoch_iter, total_steps, epoch,
+                  total_steps, dataset_size, epoch,
                   errors['G_GAN'], errors['G_L1'], errors['D_real'],
                   errors['D_fake']))
 
-            # print('[{}/{}] Epoch: {}, G_L1: {:.4f}'.format(
-            #       epoch_iter, total_steps, epoch,
-            #       errors['G_L1']))
-
-
-            # do checkpointing
+            # do model checkpoint
             torch.save(model.netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf + opt.exp_name, epoch))
             torch.save(model.netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf + opt.exp_name, epoch))
