@@ -1,19 +1,20 @@
 #!/bin/bash
-cd ./data/img_align_celeba
+cd ../../data/train/faces/img_orig/
 
 for FILE in *.jpg
 do 
 	echo $FILE
-	convert $FILE -resize 180x220 ../celeba_180x220/$FILE
+	convert $FILE -resize 256x256! ../img/$FILE
 done
 
-cd ../celeba_180x220
 
-for FILE in *.jpg
-do
-	echo $FILE
-	convert $FILE -filter Catrom -resize 25% ../celeba_55x45/$FILE
-done
+# cd ../celeba_180x220
+
+# for FILE in *.jpg
+# do
+# 	echo $FILE
+#	convert $FILE -filter Catrom -resize 25% ../celeba_55x45/$FILE
+#done
 
 
 

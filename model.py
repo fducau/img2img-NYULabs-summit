@@ -185,9 +185,9 @@ class netModel(BaseModel):
 
 
     def get_current_visuals(self):
-        fake_in = util.tensor2im(self.fake_in.data)
-        fake_out = util.tensor2im(self.fake_out.data)
-        real_out = util.tensor2im(self.real_out.data)
+        # fake_in = util.tensor2im(self.fake_in.data)
+        # fake_out = util.tensor2im(self.fake_out.data)
+        # real_out = util.tensor2im(self.real_out.data)
         return OrderedDict([('fake_in', self.lr),
                             ('fake_out', self.sr),
                             ('real_out', self.hr)])

@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import torch.utils.model_zoo as model_zoo
-
+import functools
 
 def conv3x3(in_planes, out_planes, stride=1):
     "3x3 convolution with padding"
@@ -229,10 +229,10 @@ class UnetGenerator(nn.Module):
         self.model = unet_block
 
     def forward(self, input):
-        if self.gpu_ids and isinstance(input.data, torch.cuda.FloatTensor):
-            return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
-        else:
-            return self.model(input)
+        # if self.gpu_ids and isinstance(input.data, torch.cuda.FloatTensor):
+        #     return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
+        # else:
+        return self.model(input)
 
 
 # Defines the submodule with skip connection.
@@ -246,7 +246,8 @@ class UnetSkipConnectionBlock(nn.Module):
         if type(norm_layer) == functools.partial:
             use_bias = norm_layer.func == nn.InstanceNorm2d
         else:
-            use_bias = norm_layer == nn.InstanceNorm2d
+            # use_bias = norm_layer == nn.InstanceNorm2d
+            use_bias = False
         if input_nc is None:
             input_nc = outer_nc
         downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,
@@ -305,8 +306,10 @@ def define_G(input_nc, output_nc, ngf, norm, gpu_ids=[]):
     if use_gpu:
         assert(torch.cuda.is_available())
 
-    netG = resnetSISR(n_blocks=16)
-
+    #netG = resnetSISR(n_blocks=16)
+    netG = UnetGenerator(input_nc, output_nc, num_downs=7, ngf=64,
+                         norm_layer=nn.BatchNorm2d, use_dropout=False, 
+                         gpu_ids=gpu_ids)
     if use_gpu:
         netG.cuda()
     return netG

@@ -28,18 +28,17 @@ import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--dataroot_hr', help='path to dataset', default='./data/img_align_celeba180x220_train/')
-parser.add_argument('--dataroot_hr_adv', help='path to dataset', default='./data/img_align_celeba180x220_val/')
-parser.add_argument('--dataroot_lr', help='path to dataset', default='./data/img_align_celeba55x45_train/')
+parser.add_argument('--dataroot_hr', help='path to dataset', default='./data/train/faces/')
+parser.add_argument('--dataroot_hr_adv', help='path to dataset', default='./data/train/adversarial/')
+parser.add_argument('--dataroot_lr', help='path to dataset', default='./data/train/edges')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
-parser.add_argument('--batchSize', type=int, default=16, help='input batch size')
+parser.add_argument('--batchSize', type=int, default=6, help='input batch size')
 
-parser.add_argument('--hr_width', type=int, default=180, help='the width of the HR input image to network')
-parser.add_argument('--hr_height', type=int, default=220, help='the height of the LR input image to network')
-
-parser.add_argument('--lr_width', type=int, default=45, help='the width of the LR input image to network')
-parser.add_argument('--lr_height', type=int, default=55, help='the height of the LR input image to network')
+parser.add_argument('--hr_width', type=int, default=256, help='the width of the HR input image to network')
+parser.add_argument('--hr_height', type=int, default=256, help='the height of the LR input image to network')
+parser.add_argument('--lr_width', type=int, default=256, help='the width of the LR input image to network')
+parser.add_argument('--lr_height', type=int, default=256, help='the height of the LR input image to network')
 
 
 parser.add_argument('--nz', type=int, default=100, help='size of the latent z vector')
@@ -48,7 +47,7 @@ parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in
 parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
 parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.5')
-parser.add_argument('--L1lambda', type=float,default=0.001, help='Loss in generator')
+parser.add_argument('--L1lambda', type=float,default=0.01, help='Loss in generator')
 
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
@@ -136,7 +135,7 @@ dataloader_lr = torch.utils.data.DataLoader(dataset_lr, batch_size=opt.batchSize
                                               shuffle=False, num_workers=int(opt.workers))
 
 dataloader_hr_adv = torch.utils.data.DataLoader(dataset_hr_adv, batch_size=opt.batchSize,
-                                                shuffle=False, num_workers=int(opt.workers))
+                                                shuffle=True, num_workers=int(opt.workers))
 model = netModel()
 model.initialize(opt)
 print("model was created")
