@@ -126,7 +126,7 @@ class netModel(BaseModel):
         if self.train_mode:
             self.A = Variable(self.input_A)
             self.B_fake = self.netG.forward(self.A)
-            self.B = Variable(self.B)
+            self.B = Variable(self.input_B)
             self.adv = Variable(self.input_adv)
         else:
             # Do not backprop gradients
