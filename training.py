@@ -30,8 +30,9 @@ import pickle as pkl
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
 parser.add_argument('--dataroot_faces', help='path to dataset', default='./data/train/faces/')
-parser.add_argument('--dataroot_adv', help='path to dataset', default='./data/train/adversarial/')
 parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/train/edges')
+parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./data/train/adversarial_faces/')
+parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
@@ -116,8 +117,13 @@ dataset_edges = dset.ImageFolder(
     ])
 )
 
-dataset_adv = dset.ImageFolder(
-    root=opt.dataroot_adv,
+dataset_adv_faces = dset.ImageFolder(
+    root=opt.dataroot_adv_faces,
+    transform=transforms.Compose([transforms.ToTensor()])
+)
+
+dataset_adv_edges = dset.ImageFolder(
+    root=opt.dataroot_adv_edges,
     transform=transforms.Compose([transforms.ToTensor()])
 )
 
@@ -128,10 +134,16 @@ dataloader_edges = torch.utils.data.DataLoader(dataset_edges,
                                                shuffle=False,
                                                num_workers=int(opt.workers))
 
-dataloader_adv = torch.utils.data.DataLoader(dataset_adv,
-                                             batch_size=opt.batchSize,
-                                             shuffle=True,
-                                             num_workers=int(opt.workers))
+dataloader_adv_faces = torch.utils.data.DataLoader(dataset_adv_faces,
+                                                   batch_size=opt.batchSize,
+                                                   shuffle=True,
+                                                   num_workers=int(opt.workers))
+
+dataloader_adv_edges = torch.utils.data.DataLoader(dataset_adv_edges,
+                                                   batch_size=opt.batchSize,
+                                                   shuffle=True,
+                                                   num_workers=int(opt.workers))
+
 model = netModel()
 model.initialize(opt)
 print("model was created")
@@ -150,12 +162,12 @@ total_steps = 0
 for epoch in range(opt.niter):
     epoch_start_time = time.time()
     i = -1
-    for data_faces, data_adv, data_edges in izip(dataloader_faces, dataloader_adv, dataloader_edges):
+    for data_faces, data_edges in izip(dataloader_faces, dataloader_edges):
         i += 1
         iter_start_time = time.time()
         total_steps += opt.batchSize
 
-        model.set_input((data_faces, data_adv, data_edges))
+        model.set_input((data_faces, data_edges))
         model.optimize_parameters()
 
         if i % opt.display_freq == 0:
