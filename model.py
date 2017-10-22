@@ -179,7 +179,7 @@ class netModel(BaseModel):
         # fake_in = util.tensor2im(self.fake_in.data)
         # fake_out = util.tensor2im(self.fake_out.data)
         # real_out = util.tensor2im(self.real_out.data)
-        if test or not self.test_mode:
+        if test or not self.train_mode:
             return OrderedDict('fake_out', self.B_fake)
 
         return OrderedDict([('fake_in', self.A),

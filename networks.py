@@ -308,7 +308,7 @@ def define_D(
     if which_model_netD == 'basic':
         netD = define_D(input_nc, ndf, 'n_layers', use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
     elif which_model_netD == 'n_layers':
-        netD = NLayerDiscriminator(input_nc, ndf, n_layers_D, use_sigmoid, gpu_ids=gpu_ids)
+        netD = NLayerDiscriminator(input_nc, ndf, n_layers_D, use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
     else:
         print('Discriminator model name [%s] is not recognized' %
               which_model_netD)
@@ -385,11 +385,11 @@ class NLayerDiscriminator(nn.Module):
     def __init__(self, input_nc, ndf=64, n_layers=3, norm_layer=nn.BatchNorm2d, use_sigmoid=False, gpu_ids=[]):
         super(NLayerDiscriminator, self).__init__()
         self.gpu_ids = gpu_ids
-        if type(norm_layer) == functools.partial:
-            use_bias = norm_layer.func == nn.InstanceNorm2d
-        else:
-            use_bias = norm_layer == nn.InstanceNorm2d
-
+        # if type(norm_layer) == functools.partial:
+        #     use_bias = norm_layer.func == nn.InstanceNorm2d
+        # else:
+        #     use_bias = norm_layer == nn.InstanceNorm2d
+        use_bias = False
         kw = 4
         padw = 1
         sequence = [
