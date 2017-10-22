@@ -1,14 +1,8 @@
-import numpy as np
 import torch
 import os
 from collections import OrderedDict
-from pdb import set_trace as st
 from torch.autograd import Variable
 import networks
-import util
-import os
-import torch
-from pdb import set_trace as st
 
 
 class BaseModel():
@@ -171,34 +165,29 @@ class netModel(BaseModel):
         self.optimizer_G.step()
 
     def get_current_errors(self):
-        return OrderedDict([('G_GAN', self.loss_G_GAN.data[0]),
+        if self.train_mode:
+            return OrderedDict([
+                ('G_GAN', self.loss_G_GAN.data[0]),
                 ('G_L1', self.loss_G_content.data[0]),
                 ('D_real', self.loss_D_real.data[0]),
-                ('D_fake', self.loss_D_fake.data[0])
-        ])
+                ('D_fake', self.loss_D_fake.data[0]),
+            ])
 
-        #return OrderedDict([('G_L1', self.loss_G_content.data[0]),
-        #                 ])
-
+        raise UnboundLocalError('Errors are only computed in when train_mode is True')
 
     def get_current_visuals(self, test=False):
         # fake_in = util.tensor2im(self.fake_in.data)
         # fake_out = util.tensor2im(self.fake_out.data)
         # real_out = util.tensor2im(self.real_out.data)
-        if test:
+        if test or not self.test_mode:
             return OrderedDict('fake_out', self.B_fake)
 
         return OrderedDict([('fake_in', self.A),
                             ('fake_out', self.B_fake),
                             ('real_out', self.B)])
 
-    def save(self, label):
-        self.save_network(self.netG, 'G', label, self.gpu_ids)
-        #self.save_network(self.netD, 'D', label, self.gpu_ids)
-
     def update_learning_rate(self):
-        lrd = self.opt.lr / self.opt.niter_decay
-        lr = self.old_lr - lrd
+        lr = self.old_lr / 10.
         for param_group in self.optimizer_D.param_groups:
             param_group['lr'] = lr
         for param_group in self.optimizer_G.param_groups:

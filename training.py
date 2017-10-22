@@ -47,8 +47,9 @@ parser.add_argument('--ngf', type=int, default=64, help='Number of generator fil
 parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
 parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
+parser.add_argument('--lr_update_every', type=int, default=50, help='Number of epochs to update learning rate')
 parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.5')
-parser.add_argument('--L1lambda', type=float,default=0.001, help='Loss in generator')
+parser.add_argument('--L1lambda', type=float, default=0.01, help='Loss in generator')
 
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
@@ -180,3 +181,6 @@ for epoch in range(opt.niter):
             # do model checkpoint
             torch.save(model.netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf + opt.exp_name, epoch))
             torch.save(model.netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf + opt.exp_name, epoch))
+
+        if (epoch != 0) and (epoch % opt.lr_update_every == 0):
+            model.update_learning_rate()
