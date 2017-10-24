@@ -79,7 +79,7 @@ class netModel(BaseModel):
 
         if self.train_mode:
             use_sigmoid = opt.no_lsgan
-            self.netD = networks.define_D(opt.output_nc, opt.ndf,
+            self.netD = networks.define_D(opt.output_nc + opt.input_nc, opt.ndf,
                                           opt.which_model_netD,
                                           opt.n_layers_D, use_sigmoid, self.gpu_ids)
 
