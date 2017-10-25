@@ -25,16 +25,18 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import copy
 import numpy as np
+import pickle as pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--transform_path', help='path to dataset', default='./data/test/edges/', required=True)
-parser.add_argument('--reload_model', help='model to be used for prediction', required=True)
+parser.add_argument('--transform_path', help='path to dataset', default='./data/test/edges/')
+parser.add_argument('--reload_model', help='model to be used for prediction')
 parser.add_argument('--save_folder', help='Path to save predictions')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
 parser.add_argument('--batchSize', type=int, default=1, help='input batch size')
 parser.add_argument('--outf', default='./runs/', help='folder to output images and model checkpoints')
+parser.add_argument('--manualSeed', type=int, help='manual seed')
 
 
 opt = parser.parse_args()
@@ -43,12 +45,25 @@ opt.cuda=True
 print(opt)
 
 if opt.save_folder is None:
-    opt.save_folder = opt.outf + exp_name
+    opt.save_folder = opt.outf + opt.exp_name + '/generation/'
 
 try:
     os.makedirs(opt.save_folder)
 except OSError:
     pass
+
+# Reload last model found in experiment folder if not defined
+if opt.reload_model is None:
+    try:
+        experiment_files = os.listdir(opt.outf + opt.exp_name)
+        netG_files = [e for e in experiment_files if 'netG_epoch' in e]
+        candidate_files = [e.split('_')[-1] for e in netG_files]
+        candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
+
+        reload_model = opt.outf + opt.exp_name + '/' + netG_files[candidate_files.argmax()]
+        opt.reload_model = reload_model
+    except:
+        raise UnboundLocalError('No candidate model found to reload.')
 
 if not os.path.isdir(opt.transform_path):
     raise ValueError('Not a valid samples folder to transform {}'.format(opt.transform_path))
@@ -82,6 +97,10 @@ dataset_size = len(dataset_transform)
 dataloader = torch.utils.data.DataLoader(dataset_transform, batch_size=opt.batchSize,
                                               shuffle=False, num_workers=int(opt.workers))
 
+try:
+    opt_experiment = pkl.load(open(opt.outf + opt.exp_name + '/options_dictionary.pkl', 'r'))
+except:
+    print('Options dictionary could not found in experiment folder {}'.format(opt.outf + opt.exp_name))
 
 opt_generate = opt
 opt = opt_experiment
@@ -97,12 +116,13 @@ model = netModel()
 model.initialize(opt)
 print("model was created")
 
-if os.path.isfile(opt.reload_model):
-    print("=> loading checkpoint '{}'".format(opt.reload_model))
-    checkpoint = torch.load(opt.reload_model)
+if os.path.isfile(opt['reload_model']):
+    print("=> loading checkpoint '{}'".format(opt['reload_model']))
+    checkpoint = torch.load(opt['reload_model'])
     model.netG.load_state_dict(checkpoint)
-    print("=> loaded checkpoint {}".format(opt.reload_model))
+    print("=> loaded checkpoint {}".format(opt['reload_model']))
 else:
-    print("=> no checkpoint found at '{}'".format(opt.resume))
+    print("=> no checkpoint found at '{}'".format(opt['reload_model']))
 
+model.train_mode = False
 

@@ -70,7 +70,7 @@ class netModel(BaseModel):
         # define tensors
         self.input_B = self.Tensor(opt['batchSize'], opt['input_nc'],
                                    opt['B_height'], opt['B_width'])
-        self.input_A = self.Tensor(opt.batchSize, opt.output_nc,
+        self.input_A = self.Tensor(opt['batchSize'], opt['output_nc'],
                                    opt['A_height'], opt['A_width'])
 
         # load/define networks
@@ -84,7 +84,7 @@ class netModel(BaseModel):
                                           opt['n_layers_D'], use_sigmoid, self.gpu_ids)
 
         if self.train_mode:
-            # self.fake_AB_pool = ImagePool(opt.pool_size)
+            # self.fake_AB_pool = ImagePool(opt['pool_size'])
             self.old_lr = opt['lr']
             # define loss functions
             self.criterionGAN = networks.GANLoss(use_lsgan=not opt['no_lsgan'], tensor=self.Tensor)
@@ -121,7 +121,7 @@ class netModel(BaseModel):
         else:
             # Do not backprop gradients
             self.real_A = Variable(self.input_A, volatile=True)
-            self.fake_B = self.netG.forward(self.A)
+            self.fake_B = self.netG.forward(self.real_A)
 
     def backward_D(self):
         # stop backprop to the generator by detaching fake_B
