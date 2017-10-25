@@ -34,7 +34,6 @@ parser.add_argument('--reload_model', help='model to be used for prediction')
 parser.add_argument('--save_folder', help='Path to save predictions')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
-parser.add_argument('--batchSize', type=int, default=1, help='input batch size')
 parser.add_argument('--outf', default='./runs/', help='folder to output images and model checkpoints')
 parser.add_argument('--manualSeed', type=int, help='manual seed')
 
@@ -43,59 +42,6 @@ opt = parser.parse_args()
 opt.no_lsgan = True
 opt.cuda=True
 print(opt)
-
-if opt.save_folder is None:
-    opt.save_folder = opt.outf + opt.exp_name + '/generation/'
-
-try:
-    os.makedirs(opt.save_folder)
-except OSError:
-    pass
-
-# Reload last model found in experiment folder if not defined
-if opt.reload_model is None:
-    try:
-        experiment_files = os.listdir(opt.outf + opt.exp_name)
-        netG_files = [e for e in experiment_files if 'netG_epoch' in e]
-        candidate_files = [e.split('_')[-1] for e in netG_files]
-        candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
-
-        reload_model = opt.outf + opt.exp_name + '/' + netG_files[candidate_files.argmax()]
-        opt.reload_model = reload_model
-    except:
-        raise UnboundLocalError('No candidate model found to reload.')
-
-if not os.path.isdir(opt.transform_path):
-    raise ValueError('Not a valid samples folder to transform {}'.format(opt.transform_path))
-if not os.path.isfile(opt.reload_model):
-    raise ValueError('Model {} not found'.format(opt.reload_model))
-
-
-if opt.manualSeed is None:
-    opt.manualSeed = random.randint(1, 10000)
-print("Random Seed: ", opt.manualSeed)
-random.seed(opt.manualSeed)
-torch.manual_seed(opt.manualSeed)
-if opt.cuda:
-    torch.cuda.manual_seed_all(opt.manualSeed)
-
-cudnn.benchmark = True
-
-if torch.cuda.is_available() and not opt.cuda:
-    print("WARNING: You have a CUDA device, so you should probably run with --cuda")
-
-# folder dataset
-dataset_transform = dset.ImageFolder(
-    root=opt.transform_path,
-    transform=transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    ])
-)
-
-dataset_size = len(dataset_transform)
-dataloader = torch.utils.data.DataLoader(dataset_transform, batch_size=opt.batchSize,
-                                              shuffle=False, num_workers=int(opt.workers))
 
 try:
     opt_experiment = pkl.load(open(opt.outf + opt.exp_name + '/options_dictionary.pkl', 'r'))
@@ -110,7 +56,65 @@ if not isinstance(opt, dict):
     except:
         raise ValueError('Reloaded opttions dictionary could not be read.')
 
-opt.update(vars(opt_generate))
+opt['update'](vars(opt_generate))
+opt['batchSize'] = 1
+
+if opt['save_folder'] is None:
+    opt['save_folder'] = opt['outf'] + opt['exp_name'] + '/generation/'
+
+try:
+    os.makedirs(opt['save_folder'])
+except OSError:
+    pass
+
+# Reload last model found in experiment folder if not defined
+if opt['reload_model'] is None:
+    try:
+        experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
+        netG_files = [e for e in experiment_files if 'netG_epoch' in e]
+        candidate_files = [e.split('_')[-1] for e in netG_files]
+        candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
+
+        reload_model = opt['outf'] + opt['exp_name'] + '/' + netG_files[candidate_files.argmax()]
+        opt.reload_model = reload_model
+    except:
+        raise UnboundLocalError('No candidate model found to reload.')
+
+if not os.path.isdir(opt['transform_path']):
+    raise ValueError('Not a valid samples folder to transform {}'.format(opt['transform_path']))
+if not os.path.isfile(opt['reload_model']):
+    raise ValueError('Model {} not found'.format(opt['reload_model']))
+
+
+
+
+if opt['manualSeed'] is None:
+    opt['manualSeed'] = random.randint(1, 10000)
+print("Random Seed: ", opt['manualSeed'])
+random.seed(opt['manualSeed'])
+torch.manual_seed(opt['manualSeed'])
+if opt['cuda']:
+    torch.cuda.manual_seed_all(opt['manualSeed'])
+
+cudnn.benchmark = True
+
+if torch.cuda.is_available() and not opt['cuda']:
+    print("WARNING: You have a CUDA device, so you should probably run with --cuda")
+
+# folder dataset
+dataset_transform = dset.ImageFolder(
+    root=opt['transform_path'],
+    transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+)
+
+dataset_size = len(dataset_transform)
+dataloader = torch.utils.data.DataLoader(dataset_transform, batch_size=opt['batchSize'],
+                                         shuffle=False, num_workers=int(opt['workers']))
+
+
 
 model = netModel()
 model.initialize(opt)
@@ -126,3 +130,14 @@ else:
 
 model.train_mode = False
 
+for i, data_edges in enumerate(dataloader):
+    data_edges[0] = data_edges[0][None:]
+    model.set_input(data_edges)
+    model.forward()
+
+    visuals = model.get_current_visuals()
+    visuals_concat = np.concatenate([visuals['fake_in'].data, visuals['fake_out'].data], 0)
+
+    vutils.save_image(visuals_concat,
+                      '{}/generation_{}.png'.format(opt['outf'] + opt['exp_name'], i),
+                      normalize=True)

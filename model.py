@@ -70,6 +70,7 @@ class netModel(BaseModel):
         # define tensors
         self.input_B = self.Tensor(opt['batchSize'], opt['input_nc'],
                                    opt['B_height'], opt['B_width'])
+        
         self.input_A = self.Tensor(opt['batchSize'], opt['output_nc'],
                                    opt['A_height'], opt['A_width'])
 
@@ -110,7 +111,7 @@ class netModel(BaseModel):
             self.input_A.resize_(input_A.size()).copy_(input_A)
 
         else:
-            input_A = input[0][0]
+            input_A = input[0]
             self.input_A.resize_(input_A.size()).copy_(input_A)
 
     def forward(self):
@@ -180,7 +181,8 @@ class netModel(BaseModel):
         # fake_out = util.tensor2im(self.fake_out.data)
         # real_out = util.tensor2im(self.real_out.data)
         if test or not self.train_mode:
-            return OrderedDict('fake_out', self.fake_B)
+            return OrderedDict([('fake_out', self.fake_B),
+                                ('fake_in', self.real_A)])
 
         return OrderedDict([('fake_in', self.real_A),
                             ('fake_out', self.fake_B),
