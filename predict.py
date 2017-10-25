@@ -43,6 +43,24 @@ opt.no_lsgan = True
 opt.cuda=True
 print(opt)
 
+
+def get_all_model_names(opt):
+
+    experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
+    netG_files = [e for e in experiment_files if 'netG_epoch' in e]
+
+    return netG_files
+
+
+def get_latest_model_name(opt):
+
+    netG_files = get_all_model_names(opt)
+    candidate_files = [e.split('_')[-1] for e in netG_files]
+    candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
+
+    return netG_files[candidate_files.argmax()]
+
+
 try:
     opt_experiment = pkl.load(open(opt.outf + opt.exp_name + '/options_dictionary.pkl', 'r'))
 except:
@@ -70,13 +88,10 @@ except OSError:
 # Reload last model found in experiment folder if not defined
 if opt['reload_model'] is None:
     try:
-        experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
-        netG_files = [e for e in experiment_files if 'netG_epoch' in e]
-        candidate_files = [e.split('_')[-1] for e in netG_files]
-        candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
-
-        reload_model = opt['outf'] + opt['exp_name'] + '/' + netG_files[candidate_files.argmax()]
-        opt.reload_model = reload_model
+        reload_model = get_latest_model_name(opt)
+        reload_model_path = opt['outf'] + opt['exp_name'] + '/' + reload_model
+        opt['reload_model'] = reload_model
+        opt['reload_model_path'] = reload_model_path
     except:
         raise UnboundLocalError('No candidate model found to reload.')
 
@@ -84,9 +99,6 @@ if not os.path.isdir(opt['transform_path']):
     raise ValueError('Not a valid samples folder to transform {}'.format(opt['transform_path']))
 if not os.path.isfile(opt['reload_model']):
     raise ValueError('Model {} not found'.format(opt['reload_model']))
-
-
-
 
 if opt['manualSeed'] is None:
     opt['manualSeed'] = random.randint(1, 10000)
@@ -114,15 +126,13 @@ dataset_size = len(dataset_transform)
 dataloader = torch.utils.data.DataLoader(dataset_transform, batch_size=opt['batchSize'],
                                          shuffle=False, num_workers=int(opt['workers']))
 
-
-
 model = netModel()
 model.initialize(opt)
 print("model was created")
 
 if os.path.isfile(opt['reload_model']):
     print("=> loading checkpoint '{}'".format(opt['reload_model']))
-    checkpoint = torch.load(opt['reload_model'])
+    checkpoint = torch.load(opt['reload_model_path'])
     model.netG.load_state_dict(checkpoint)
     print("=> loaded checkpoint {}".format(opt['reload_model']))
 else:
@@ -130,14 +140,41 @@ else:
 
 model.train_mode = False
 
-for i, data_edges in enumerate(dataloader):
-    data_edges[0] = data_edges[0][None:]
-    model.set_input(data_edges)
-    model.forward()
 
-    visuals = model.get_current_visuals()
-    visuals_concat = np.concatenate([visuals['fake_in'].data, visuals['fake_out'].data], 0)
+def generation_loop(dataloader, model, save_imgs=False):
+    visuals_output = []
+    for i, data_edges in enumerate(dataloader):
+        data_edges[0] = data_edges[0][None:]
+        model.set_input(data_edges)
+        model.forward()
 
-    vutils.save_image(visuals_concat,
-                      '{}/generation_{}.png'.format(opt['outf'] + opt['exp_name'], i),
-                      normalize=True)
+        visuals = model.get_current_visuals()
+        visuals_concat = np.concatenate([visuals['fake_in'].data, visuals['fake_out'].data], 0)
+        visuals_output.append(visuals_concat)
+
+        if save_images:
+
+            vutils.save_image(visuals_concat,
+                              '{}/generation_{}'.format(opt['save_folder'], i),
+                              normalize=True)
+
+    return visuals_output
+
+def generate_through_models(dataloader, model opt):
+    model_names = get_all_model_names(opt)
+    model_paths = [opt['outf'] + opt['exp_name'] + '/' + model_name for model_name in model_names]
+
+    for model_path, model_name in zip(model_paths, model_names):
+        checkpoint = torch.load(model_name)
+        model.netG.load_state_dict(checkpoint)
+        print("=> loaded checkpoint {}".format(opt['reload_model']))
+
+        imgs_output =  generation_loop(dataloader, model, save_imgs=False)
+        for img in imgs_output:
+            vutils.save_image(img,
+                              '{}/{}_{}.png'.format(opt['save_folder'], model_name, i),
+                              normalize=True)
+
+
+
+
