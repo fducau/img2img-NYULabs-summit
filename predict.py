@@ -83,6 +83,16 @@ dataloader = torch.utils.data.DataLoader(dataset_transform, batch_size=opt.batch
                                               shuffle=False, num_workers=int(opt.workers))
 
 
+opt_generate = opt
+opt = opt_experiment
+if not isinstance(opt, dict):
+    try:
+        opt = vars(opt)
+    except:
+        raise ValueError('Reloaded opttions dictionary could not be read.')
+
+opt.update(vars(opt_generate))
+
 model = netModel()
 model.initialize(opt)
 print("model was created")

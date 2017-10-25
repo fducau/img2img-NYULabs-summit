@@ -11,9 +11,9 @@ class BaseModel():
 
     def initialize(self, opt):
         self.opt = opt
-        self.gpu_ids = opt.gpu_ids
+        self.gpu_ids = opt['gpu_ids']
         self.Tensor = torch.cuda.FloatTensor if self.gpu_ids else torch.Tensor
-        self.save_dir = opt.outf
+        self.save_dir = opt['outf']
 
     def set_input(self, input):
         self.input = input
@@ -68,33 +68,33 @@ class netModel(BaseModel):
         BaseModel.initialize(self, opt)
         self.train_mode = train_mode
         # define tensors
-        self.input_B = self.Tensor(opt.batchSize, opt.input_nc,
-                                   opt.B_height, opt.B_width)
+        self.input_B = self.Tensor(opt['batchSize'], opt['input_nc'],
+                                   opt['B_height'], opt['B_width'])
         self.input_A = self.Tensor(opt.batchSize, opt.output_nc,
-                                   opt.A_height, opt.A_width)
+                                   opt['A_height'], opt['A_width'])
 
         # load/define networks
-        self.netG = networks.define_G(opt.input_nc, opt.output_nc, opt.ngf,
-                                      opt.norm, self.gpu_ids)
+        self.netG = networks.define_G(opt['input_nc'], opt['output_nc'], opt['ngf'],
+                                      opt['norm'], self.gpu_ids)
 
         if self.train_mode:
-            use_sigmoid = opt.no_lsgan
-            self.netD = networks.define_D(opt.output_nc, opt.ndf,
-                                          opt.which_model_netD,
-                                          opt.n_layers_D, use_sigmoid, self.gpu_ids)
+            use_sigmoid = opt['no_lsgan']
+            self.netD = networks.define_D(opt['input_nc'] + opt['output_nc'], opt['ndf'],
+                                          opt['which_model_netD'],
+                                          opt['n_layers_D'], use_sigmoid, self.gpu_ids)
 
         if self.train_mode:
             # self.fake_AB_pool = ImagePool(opt.pool_size)
-            self.old_lr = opt.lr
+            self.old_lr = opt['lr']
             # define loss functions
-            self.criterionGAN = networks.GANLoss(use_lsgan=not opt.no_lsgan, tensor=self.Tensor)
+            self.criterionGAN = networks.GANLoss(use_lsgan=not opt['no_lsgan'], tensor=self.Tensor)
             self.content_loss = torch.nn.MSELoss()
 
             # initialize optimizers
             self.optimizer_G = torch.optim.Adam(self.netG.parameters(),
-                                                lr=opt.lr, betas=(opt.beta1, 0.999))
+                                                lr=opt['lr'], betas=(opt['beta1'], 0.999))
             self.optimizer_D = torch.optim.Adam(self.netD.parameters(),
-                                                lr=opt.lr, betas=(opt.beta1, 0.999))
+                                                lr=opt['lr'], betas=(opt['beta1'], 0.999))
 
             print('---------- Networks initialized -------------')
             networks.print_network(self.netG)
@@ -147,7 +147,7 @@ class netModel(BaseModel):
 
         # Second, G(A) = B
         self.loss_G_content = self.content_loss(self.fake_B, self.real_B)
-        self.loss_G = self.loss_G_content + self.loss_G_GAN * self.opt.L1lambda
+        self.loss_G = self.loss_G_content + self.loss_G_GAN * self.opt['L1lambda']
 
         self.loss_G.backward()
 
