@@ -72,6 +72,14 @@ parser.add_argument('--n_layers_D', type=int, default=3, help='only used if whic
 parser.add_argument('--display_freq', type=int, default=100, help='Save images frequency')
 parser.add_argument('--print_freq', type=int, default=50, help='Screen output frequency')
 
+
+def get_all_model_names(opt):
+
+    experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
+    netG_files = [e for e in experiment_files if 'netG_epoch' in e]
+
+    return netG_files
+
 def get_latest_model_name(opt):
 
     netG_files = get_all_model_names(opt)
