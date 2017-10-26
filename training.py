@@ -89,7 +89,6 @@ opt_argparse = opt
 opt = vars(opt)
 
 if opt['reload_model']:
-    
     opt_experiment = None
     try:
         opt_experiment = pkl.load(open(opt['outf'] + opt['exp_name'] + '/options_dictionary.pkl', 'r'))
@@ -101,9 +100,7 @@ if opt['reload_model']:
             opt_experiment = vars(opt_experiment)
         except:
             print('Reloaded opttions dictionary could not be read. Using given optons instead.')
-
     opt.update(opt_experiment)
-
     # Reload last model found in experiment folder if not defined
     if opt['reload_model_name'] is None:
         try:
@@ -114,29 +111,36 @@ if opt['reload_model']:
         except:
             raise UnboundLocalError('No candidate model found to reload.')
 
+# Create output folder
+if not os.path.isdir(opt['outf'] + opt['exp_name']):
+    if not os.path.isdir(opt['outf']):
+        os.mkdir(opt['outf'])
+    os.mkdir(opt['outf'] + opt['exp_name'])
+
+pkl.dump(opt, open('{}/options_dictionary.pkl'.format(opt['outf'] + opt['exp_name']), 'wb'))
 
 try:
-    os.makedirs(opt.outf)
+    os.makedirs(opt['outf'])
 except OSError:
     pass
 
-if opt.manualSeed is None:
-    opt.manualSeed = random.randint(1, 10000)
-print("Random Seed: ", opt.manualSeed)
-random.seed(opt.manualSeed)
-torch.manual_seed(opt.manualSeed)
-if opt.cuda:
-    torch.cuda.manual_seed_all(opt.manualSeed)
+if opt['manualSeed'] is None:
+    opt['manualSeed'] = random.randint(1, 10000)
+print("Random Seed: ", opt['manualSeed'])
+random.seed(opt['manualSeed'])
+torch.manual_seed(opt['manualSeed'])
+if opt['cuda']:
+    torch.cuda.manual_seed_all(opt['manualSeed'])
 
 cudnn.benchmark = True
 
-if torch.cuda.is_available() and not opt.cuda:
+if torch.cuda.is_available() and not opt['cuda']:
     print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
 
 # folder dataset
 dataset_faces = dset.ImageFolder(
-    root=opt.dataroot_faces,
+    root=opt['dataroot_faces'],
     transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
@@ -146,13 +150,13 @@ dataset_faces = dset.ImageFolder(
 assert dataset_faces
 dataset_size = len(dataset_faces)
 dataloader_faces = torch.utils.data.DataLoader(dataset_faces,
-                                               batch_size=opt.batchSize,
+                                               batch_size=opt['batchSize'],
                                                shuffle=False,
-                                               num_workers=int(opt.workers))
+                                               num_workers=int(opt['workers']))
 
 # folder dataset
 dataset_edges = dset.ImageFolder(
-    root=opt.dataroot_edges,
+    root=opt['dataroot_edges'],
     transform=transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
@@ -160,39 +164,29 @@ dataset_edges = dset.ImageFolder(
 )
 
 dataset_adv_faces = dset.ImageFolder(
-    root=opt.dataroot_adv_faces,
+    root=opt['dataroot_adv_faces'],
     transform=transforms.Compose([transforms.ToTensor()])
 )
 
 dataset_adv_edges = dset.ImageFolder(
-    root=opt.dataroot_adv_edges,
+    root=opt['dataroot_adv_edges'],
     transform=transforms.Compose([transforms.ToTensor()])
 )
 
 dataloader_edges = torch.utils.data.DataLoader(dataset_edges,
-                                               batch_size=opt.batchSize,
+                                               batch_size=opt['batchSize'],
                                                shuffle=False,
-                                               num_workers=int(opt.workers))
+                                               num_workers=int(opt['workers']))
 
 dataloader_adv_faces = torch.utils.data.DataLoader(dataset_adv_faces,
-                                                   batch_size=opt.batchSize,
+                                                   batch_size=opt['batchSize'],
                                                    shuffle=True,
-                                                   num_workers=int(opt.workers))
+                                                   num_workers=int(opt['workers']))
 
 dataloader_adv_edges = torch.utils.data.DataLoader(dataset_adv_edges,
-                                                   batch_size=opt.batchSize,
+                                                   batch_size=opt['batchSize'],
                                                    shuffle=True,
-                                                   num_workers=int(opt.workers))
-opt_dict = vars(opt)
-opt = vars(opt)
-# Create output folder
-if not os.path.isdir(opt['outf'] + opt['exp_name']):
-    if not os.path.isdir(opt['outf']):
-        os.mkdir(opt['outf'])
-    os.mkdir(opt['outf'] + opt['exp_name'])
-
-pkl.dump(opt, open('{}/options_dictionary.pkl'.format(opt['outf'] + opt['exp_name']), 'wb'))
-
+                                                   num_workers=int(opt['workers']))
 
 model = netModel()
 model.initialize(opt)
@@ -217,31 +211,31 @@ print("model was created")
 
 
 total_steps = 0
-for epoch in range(opt_dict['niter']):
+for epoch in range(opt['niter']):
     epoch_start_time = time.time()
     i = -1
     for data_faces, data_edges in izip(dataloader_faces, dataloader_edges):
         i += 1
         iter_start_time = time.time()
-        total_steps += opt_dict['batchSize']
+        total_steps += opt['batchSize']
 
         model.set_input((data_faces, data_edges))
         model.optimize_parameters()
 
-        if i % opt_dict['display_freq'] == 0:
+        if i % opt['display_freq'] == 0:
             visuals = model.get_current_visuals()
 
             vutils.save_image(visuals['real_out'].data,
-                              '%s/real_samples.png' % (opt_dict['outf'] + opt_dict['exp_name']),
+                              '%s/real_samples.png' % (opt['outf'] + opt['exp_name']),
                               normalize=True)
             vutils.save_image(visuals['fake_out'].data,
-                              '%s/fake_samples_epoch_%03d.png' % (opt_dict['outf'] + opt_dict['exp_name'], epoch),
+                              '%s/fake_samples_epoch_%03d.png' % (opt['outf'] + opt['exp_name'], epoch),
                               normalize=True)
             vutils.save_image(visuals['fake_in'].data,
-                              '%s/input_samples.png' % (opt_dict['outf'] + opt_dict['exp_name']),
+                              '%s/input_samples.png' % (opt['outf'] + opt['exp_name']),
                               normalize=True)
 
-        if total_steps % (opt_dict['print_freq'] * opt_dict['batchSize']) == 0:
+        if total_steps % (opt['print_freq'] * opt['batchSize']) == 0:
             errors = model.get_current_errors()
             print('[{}/{}] Epoch: {}, G_GAN: {:.4f}, G_L1: {:.4f}, D_real: {:.4f}, D_fake: {:.4f}'.format(
                   total_steps, dataset_size, epoch,
@@ -249,8 +243,8 @@ for epoch in range(opt_dict['niter']):
                   errors['D_fake']))
 
             # do model checkpoint
-            torch.save(model.netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt_dict['outf'] + opt_dict['exp_name'], epoch))
-            torch.save(model.netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt_dict['outf'] + opt_dict['exp_name'], epoch))
+            torch.save(model.netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt['outf'] + opt['exp_name'], epoch))
+            torch.save(model.netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt['outf'] + opt['exp_name'], epoch))
 
-        if (epoch != 0) and (epoch % opt_dict['lr_update_every'] == 0):
+        if (epoch != 0) and (epoch % opt['lr_update_every'] == 0):
             model.update_learning_rate()
