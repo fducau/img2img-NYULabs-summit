@@ -34,8 +34,9 @@ parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/
 parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./data/train/adversarial_faces/')
 parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
 
-parser.add_argument('--reload_model', help='model to be used for prediction')
-parser.add_argument('--reload_options', type=bool, default=False, help='Use the options saved during the training of the model to reload')
+parser.add_argument('--reload_model', type=bool, default=False, help='model to be used for prediction')
+parser.add_argument('--reload_model_name', type=str, help='model to be used for prediction')
+parser.add_argument('--reload_options', type=bool, default=True, help='Use the options saved during the training of the model to reload')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
@@ -71,13 +72,22 @@ parser.add_argument('--n_layers_D', type=int, default=3, help='only used if whic
 parser.add_argument('--display_freq', type=int, default=100, help='Save images frequency')
 parser.add_argument('--print_freq', type=int, default=50, help='Screen output frequency')
 
+def get_latest_model_name(opt):
+
+    netG_files = get_all_model_names(opt)
+    candidate_files = [e.split('_')[-1] for e in netG_files]
+    candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
+
+    return netG_files[candidate_files.argmax()]
+
+
 opt = parser.parse_args()
 opt.no_lsgan = True
 opt.cuda=True
 print(opt)
 
 
-if opt.reload_model is not None and opt.reload_options:
+if opt.reload_model:
     try:
         opt_experiment = pkl.load(open(opt.outf + opt.exp_name + '/options_dictionary.pkl', 'r'))
     except:
@@ -91,6 +101,16 @@ if opt.reload_model is not None and opt.reload_options:
             opt = opt_this_launch
 
     opt.update(vars(opt_this_launch))
+
+    # Reload last model found in experiment folder if not defined
+    if opt['reload_model_name'] is None:
+        try:
+            reload_model = get_latest_model_name(opt)
+            reload_model_path = opt['outf'] + opt['exp_name'] + '/' + reload_model
+            opt['reload_model'] = reload_model
+            opt['reload_model_path'] = reload_model_path
+        except:
+            raise UnboundLocalError('No candidate model found to reload.')
 
 
 try:
@@ -177,12 +197,12 @@ model.initialize(opt)
 print("model was created")
 
 if os.path.isfile(opt['reload_model_path']):
-    print("=> loading checkpoint '{}'".format(opt['reload_model']))
+    print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
     checkpoint = torch.load(opt['reload_model_path'])
     model.netG.load_state_dict(checkpoint)
-    print("=> loaded checkpoint {}".format(opt['reload_model']))
+    print("=> loaded checkpoint {}".format(opt['reload_model_name']))
 else:
-    print("=> no checkpoint found at '{}'".format(opt['reload_model']))
+    print("=> no checkpoint found at '{}'".format(opt['reload_model_name']))
 
 
 model = netModel()
