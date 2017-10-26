@@ -30,7 +30,7 @@ import pickle as pkl
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
 parser.add_argument('--dataroot_faces', help='path to dataset', default='./data/train/faces/')
-parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/train/edges')
+parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/train/hed_edges')
 parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./data/train/adversarial_faces/')
 parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
 
@@ -50,7 +50,7 @@ parser.add_argument('--niter', type=int, default=100, help='number of epochs to 
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
 parser.add_argument('--lr_update_every', type=int, default=50, help='Number of epochs to update learning rate')
 parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.5')
-parser.add_argument('--L1lambda', type=float, default=0.0001, help='Loss in generator')
+parser.add_argument('--L1lambda', type=float, default=0.0005, help='Loss in generator')
 
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
@@ -141,20 +141,24 @@ dataloader_adv_edges = torch.utils.data.DataLoader(dataset_adv_edges,
                                                    batch_size=opt.batchSize,
                                                    shuffle=True,
                                                    num_workers=int(opt.workers))
+opt_dict = vars(opt)
+opt = vars(opt)
+# Create output folder
+if not os.path.isdir(opt['outf'] + opt['exp_name']):
+    if not os.path.isdir(opt['outf']):
+        os.mkdir(opt['outf'])
+    os.mkdir(opt['outf'] + opt['exp_name'])
+
+pkl.dump(opt, open('{}/options_dictionary.pkl'.format(opt['outf'] + opt['exp_name']), 'wb'))
+
+
 
 model = netModel()
 model.initialize(opt)
 print("model was created")
 # Add visualizer?
 
-# Create output folder
-if not os.path.isdir(opt.outf + opt.exp_name):
-    if not os.path.isdir(opt.outf):
-        os.mkdir(opt.outf)
-    os.mkdir(opt.outf + opt.exp_name)
 
-opt_dict = vars(opt)
-pkl.dump(opt_dict, open('{}/options_dictionary.pkl'.format(opt.outf + opt.exp_name), 'wb'))
 
 
 
@@ -177,7 +181,7 @@ for epoch in range(opt_dict['niter']):
                               '%s/real_samples.png' % (opt_dict['outf'] + opt_dict['exp_name']),
                               normalize=True)
             vutils.save_image(visuals['fake_out'].data,
-                              '%s/fake_samples_epoch_%03d.png' % (opt_dict['outf'] + opt_dict.exp_name, epoch),
+                              '%s/fake_samples_epoch_%03d.png' % (opt_dict['outf'] + opt_dict['exp_name'], epoch),
                               normalize=True)
             vutils.save_image(visuals['fake_in'].data,
                               '%s/input_samples.png' % (opt_dict['outf'] + opt_dict['exp_name']),

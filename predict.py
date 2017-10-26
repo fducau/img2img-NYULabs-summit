@@ -74,7 +74,7 @@ if not isinstance(opt, dict):
     except:
         raise ValueError('Reloaded opttions dictionary could not be read.')
 
-opt['update'](vars(opt_generate))
+opt.update(vars(opt_generate))
 opt['batchSize'] = 1
 
 if opt['save_folder'] is None:
@@ -97,7 +97,7 @@ if opt['reload_model'] is None:
 
 if not os.path.isdir(opt['transform_path']):
     raise ValueError('Not a valid samples folder to transform {}'.format(opt['transform_path']))
-if not os.path.isfile(opt['reload_model']):
+if not os.path.isfile(opt['reload_model_path']):
     raise ValueError('Model {} not found'.format(opt['reload_model']))
 
 if opt['manualSeed'] is None:
@@ -130,7 +130,7 @@ model = netModel()
 model.initialize(opt)
 print("model was created")
 
-if os.path.isfile(opt['reload_model']):
+if os.path.isfile(opt['reload_model_path']):
     print("=> loading checkpoint '{}'".format(opt['reload_model']))
     checkpoint = torch.load(opt['reload_model_path'])
     model.netG.load_state_dict(checkpoint)
@@ -141,7 +141,7 @@ else:
 model.train_mode = False
 
 
-def generation_loop(dataloader, model, save_imgs=False):
+def generation_loop(dataloader, model, opt, save_imgs=False, normalize=True):
     visuals_output = []
     for i, data_edges in enumerate(dataloader):
         data_edges[0] = data_edges[0][None:]
@@ -149,25 +149,25 @@ def generation_loop(dataloader, model, save_imgs=False):
         model.forward()
 
         visuals = model.get_current_visuals()
-        visuals_concat = np.concatenate([visuals['fake_in'].data, visuals['fake_out'].data], 0)
+        visuals_concat = torch.cat([visuals['fake_in'].data, visuals['fake_out'].data], 0)
         visuals_output.append(visuals_concat)
 
-        if save_images:
+        if save_imgs:
 
             vutils.save_image(visuals_concat,
-                              '{}/generation_{}'.format(opt['save_folder'], i),
+                              '{}/generation_{}.png'.format(opt['save_folder'], i),
                               normalize=True)
 
     return visuals_output
 
-def generate_through_models(dataloader, model opt):
+def generate_through_models(dataloader, model, opt):
     model_names = get_all_model_names(opt)
     model_paths = [opt['outf'] + opt['exp_name'] + '/' + model_name for model_name in model_names]
 
     for model_path, model_name in zip(model_paths, model_names):
-        checkpoint = torch.load(model_name)
+        checkpoint = torch.load(model_path)
         model.netG.load_state_dict(checkpoint)
-        print("=> loaded checkpoint {}".format(opt['reload_model']))
+        print("=> loaded checkpoint {}".format(model_name))
 
         imgs_output =  generation_loop(dataloader, model, save_imgs=False)
         for img in imgs_output:
