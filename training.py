@@ -85,22 +85,24 @@ opt = parser.parse_args()
 opt.no_lsgan = True
 opt.cuda=True
 print(opt)
+opt_argparse = opt
+opt = vars(opt)
 
-
-if opt.reload_model:
+if opt['reload_model']:
+    
+    opt_experiment = None
     try:
-        opt_experiment = pkl.load(open(opt.outf + opt.exp_name + '/options_dictionary.pkl', 'r'))
+        opt_experiment = pkl.load(open(opt['outf'] + opt['exp_name'] + '/options_dictionary.pkl', 'r'))
     except:
-        print('Options dictionary could not found in experiment folder {}. Using given options instead.'.format(opt.outf + opt.exp_name))
+        print('Options dictionary could not found in experiment folder {}. Using given options instead.'.format(opt['outf'] + opt['exp_name']))
 
     if not isinstance(opt, dict):
         try:
             opt_experiment = vars(opt_experiment)
         except:
             print('Reloaded opttions dictionary could not be read. Using given optons instead.')
-            opt = opt_this_launch
 
-    opt.update(vars(opt_this_launch))
+    opt.update(opt_experiment)
 
     # Reload last model found in experiment folder if not defined
     if opt['reload_model_name'] is None:
