@@ -34,7 +34,10 @@ parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/
 parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./data/train/adversarial_faces/')
 parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
 
-parser.add_argument('--workers', type=int, default=1, help='number of data loading workers')
+parser.add_argument('--reload_model', help='model to be used for prediction')
+parser.add_argument('--reload_options', type=bool, default=False, help='Use the options saved during the training of the model to reload')
+
+parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
 
 parser.add_argument('--B_width', type=int, default=256, help='the width of the Face input image to network')
@@ -72,6 +75,23 @@ opt = parser.parse_args()
 opt.no_lsgan = True
 opt.cuda=True
 print(opt)
+
+
+if opt.reload_model is not None and opt.reload_options:
+    try:
+        opt_experiment = pkl.load(open(opt.outf + opt.exp_name + '/options_dictionary.pkl', 'r'))
+    except:
+        print('Options dictionary could not found in experiment folder {}. Using given options instead.'.format(opt.outf + opt.exp_name))
+
+    if not isinstance(opt, dict):
+        try:
+            opt_experiment = vars(opt_experiment)
+        except:
+            print('Reloaded opttions dictionary could not be read. Using given optons instead.')
+            opt = opt_this_launch
+
+    opt.update(vars(opt_this_launch))
+
 
 try:
     os.makedirs(opt.outf)
@@ -151,6 +171,18 @@ if not os.path.isdir(opt['outf'] + opt['exp_name']):
 
 pkl.dump(opt, open('{}/options_dictionary.pkl'.format(opt['outf'] + opt['exp_name']), 'wb'))
 
+
+model = netModel()
+model.initialize(opt)
+print("model was created")
+
+if os.path.isfile(opt['reload_model_path']):
+    print("=> loading checkpoint '{}'".format(opt['reload_model']))
+    checkpoint = torch.load(opt['reload_model_path'])
+    model.netG.load_state_dict(checkpoint)
+    print("=> loaded checkpoint {}".format(opt['reload_model']))
+else:
+    print("=> no checkpoint found at '{}'".format(opt['reload_model']))
 
 
 model = netModel()
