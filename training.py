@@ -206,12 +206,15 @@ model.initialize(opt)
 print("model was created")
 # Add visualizer?
 
-
-
+if opt['reload_model'] is not None:
+    epoch_start = opt['reload_model'].split('_')[-1]
+    epoch_start = int(epoch_start.split('.')[0])
+else:
+    epoch_start = 0
 
 
 total_steps = 0
-for epoch in range(opt['niter']):
+for epoch in range(epoch_start, opt['niter']):
     epoch_start_time = time.time()
     i = -1
     for data_faces, data_edges in izip(dataloader_faces, dataloader_edges):
