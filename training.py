@@ -34,7 +34,7 @@ parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/
 parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./data/train/adversarial_faces/')
 parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
 
-parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
+parser.add_argument('--workers', type=int, default=1, help='number of data loading workers')
 parser.add_argument('--batchSize', type=int, default=32, help='input batch size')
 
 parser.add_argument('--B_width', type=int, default=256, help='the width of the Face input image to network')
