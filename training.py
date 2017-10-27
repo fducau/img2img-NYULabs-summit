@@ -229,20 +229,22 @@ model = netModel()
 model.initialize(opt)
 print("model was created")
 
-if os.path.isfile(opt['reload_model_path']):
-    print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
-    checkpoint = torch.load(opt['reload_model_path'])
-    model.netG.load_state_dict(checkpoint)
 
-    print("=> loaded checkpoint {}".format(opt['reload_model_name']))
+if os.path.isfile(opt['reload_modelG_path']):
+
+    print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
+    checkpoint = torch.load(opt['reload_model_netG_path'])
+    model.netG.load_state_dict(checkpoint)
+    print("=> loaded checkpoint {}".format(opt['reload_model_netG_name']))
+
+    print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
+    checkpoint = torch.load(opt['reload_model_netD_path'])
+    model.netD.load_state_dict(checkpoint)
+    print("=> loaded checkpoint {}".format(opt['reload_model_netG_name']))
+
 else:
     print("=> no checkpoint found at '{}'".format(opt['reload_model_name']))
 
-
-model = netModel()
-model.initialize(opt)
-print("model was created")
-# Add visualizer?
 
 if opt['reload_model'] is not None:
     epoch_start = opt['reload_model'].split('_')[-1]
