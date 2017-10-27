@@ -29,7 +29,7 @@ import pickle as pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--transform_path', help='path to dataset', default='./data/test/edges/')
+parser.add_argument('--transform_path', help='path to dataset', default='./data/test/hed_3d_sketches/')
 parser.add_argument('--reload_model', help='model to be used for prediction')
 parser.add_argument('--save_folder', help='Path to save predictions')
 
@@ -42,6 +42,41 @@ opt = parser.parse_args()
 opt.no_lsgan = True
 opt.cuda=True
 print(opt)
+
+def generation_loop(dataloader, model, opt, save_imgs=False, normalize=True):
+    visuals_output = []
+    for i, data_edges in enumerate(dataloader):
+        data_edges[0] = data_edges[0][None:]
+        model.set_input(data_edges)
+        model.forward()
+
+        visuals = model.get_current_visuals()
+        visuals_concat = torch.cat([visuals['fake_in'].data, visuals['fake_out'].data], 0)
+        visuals_output.append(visuals_concat)
+
+        if save_imgs:
+
+            vutils.save_image(visuals_concat,
+                              '{}/generation_{}.png'.format(opt['save_folder'], i),
+                              normalize=True)
+
+    return visuals_output
+
+def generate_through_models(dataloader, model, opt):
+    model_names = get_all_model_names(opt)
+    model_paths = [opt['outf'] + opt['exp_name'] + '/' + model_name for model_name in model_names]
+
+    for model_path, model_name in zip(model_paths, model_names):
+        checkpoint = torch.load(model_path)
+        model.netG.load_state_dict(checkpoint)
+        print("=> loaded checkpoint {}".format(model_name))
+
+        imgs_output =  generation_loop(dataloader, model, save_imgs=False)
+        for img in imgs_output:
+            vutils.save_image(img,
+                              '{}/{}_{}.png'.format(opt['save_folder'], model_name, i),
+                              normalize=True)
+
 
 
 def get_all_model_names(opt):
@@ -140,40 +175,8 @@ else:
 
 model.train_mode = False
 
+generation_loop(dataloader, model, opt, save_imgs=True)
 
-def generation_loop(dataloader, model, opt, save_imgs=False, normalize=True):
-    visuals_output = []
-    for i, data_edges in enumerate(dataloader):
-        data_edges[0] = data_edges[0][None:]
-        model.set_input(data_edges)
-        model.forward()
-
-        visuals = model.get_current_visuals()
-        visuals_concat = torch.cat([visuals['fake_in'].data, visuals['fake_out'].data], 0)
-        visuals_output.append(visuals_concat)
-
-        if save_imgs:
-
-            vutils.save_image(visuals_concat,
-                              '{}/generation_{}.png'.format(opt['save_folder'], i),
-                              normalize=True)
-
-    return visuals_output
-
-def generate_through_models(dataloader, model, opt):
-    model_names = get_all_model_names(opt)
-    model_paths = [opt['outf'] + opt['exp_name'] + '/' + model_name for model_name in model_names]
-
-    for model_path, model_name in zip(model_paths, model_names):
-        checkpoint = torch.load(model_path)
-        model.netG.load_state_dict(checkpoint)
-        print("=> loaded checkpoint {}".format(model_name))
-
-        imgs_output =  generation_loop(dataloader, model, save_imgs=False)
-        for img in imgs_output:
-            vutils.save_image(img,
-                              '{}/{}_{}.png'.format(opt['save_folder'], model_name, i),
-                              normalize=True)
 
 
 

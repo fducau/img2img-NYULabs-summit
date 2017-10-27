@@ -56,7 +56,7 @@ parser.add_argument('--niter', type=int, default=100, help='number of epochs to 
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
 parser.add_argument('--lr_update_every', type=int, default=15, help='Number of epochs to update learning rate')
 parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.5')
-parser.add_argument('--L1lambda', type=float, default=0.0005, help='Loss in generator')
+parser.add_argument('--L1lambda', type=float, default=0.01, help='Loss in generator')
 
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
@@ -74,6 +74,7 @@ parser.add_argument('--n_layers_D', type=int, default=3, help='only used if whic
 parser.add_argument('--display_freq', type=int, default=100, help='Save images frequency')
 parser.add_argument('--print_freq', type=int, default=50, help='Screen output frequency')
 
+<<<<<<< HEAD
 def get_all_model_names(opt, which='both'):
     rv = {}
     if which == 'both' or which == 'netG':
@@ -91,6 +92,17 @@ def get_all_model_names(opt, which='both'):
 
 
 def get_latest_model_name(opt, which='both'):
+=======
+
+def get_all_model_names(opt):
+
+    experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
+    netG_files = [e for e in experiment_files if 'netG_epoch' in e]
+
+    return netG_files
+
+def get_latest_model_name(opt):
+>>>>>>> fba226e571ae6e338d9d4bed7a07fd16bbb235f7
 
     rv = {}
     model_files = get_all_model_names(opt, which)
@@ -228,6 +240,7 @@ dataloader_adv_edges = torch.utils.data.DataLoader(dataset_adv_edges,
 model = netModel()
 model.initialize(opt)
 print("model was created")
+<<<<<<< HEAD
 
 
 if os.path.isfile(opt['reload_modelG_path']):
@@ -249,9 +262,23 @@ else:
 if opt['reload_model'] is not None:
     epoch_start = opt['reload_model'].split('_')[-1]
     epoch_start = int(epoch_start.split('.')[0])
+=======
+# Add visualizer?
+
+if opt['reload_model']:
+    if os.path.isfile(opt['reload_model_path']):
+        print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
+        checkpoint = torch.load(opt['reload_model_path'])
+        model.netG.load_state_dict(checkpoint)
+        print("=> loaded checkpoint {}".format(opt['reload_model_name']))
+        epoch_start = opt['reload_model'].split('_')[-1]
+        epoch_start = int(epoch_start.split('.')[0])
+
+    else:
+        print("=> no checkpoint found at '{}'".format(opt['reload_model_name']))
+>>>>>>> fba226e571ae6e338d9d4bed7a07fd16bbb235f7
 else:
     epoch_start = 0
-
 
 total_steps = 0
 for epoch in range(epoch_start, opt['niter']):
