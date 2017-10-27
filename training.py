@@ -54,7 +54,7 @@ parser.add_argument('--niter', type=int, default=100, help='number of epochs to 
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
 parser.add_argument('--lr_update_every', type=int, default=50, help='Number of epochs to update learning rate')
 parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.5')
-parser.add_argument('--L1lambda', type=float, default=0.001, help='Loss in generator')
+parser.add_argument('--L1lambda', type=float, default=0.01, help='Loss in generator')
 
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
@@ -199,27 +199,21 @@ dataloader_adv_edges = torch.utils.data.DataLoader(dataset_adv_edges,
 model = netModel()
 model.initialize(opt)
 print("model was created")
-
-if os.path.isfile(opt['reload_model_path']):
-    print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
-    checkpoint = torch.load(opt['reload_model_path'])
-    model.netG.load_state_dict(checkpoint)
-    print("=> loaded checkpoint {}".format(opt['reload_model_name']))
-else:
-    print("=> no checkpoint found at '{}'".format(opt['reload_model_name']))
-
-
-model = netModel()
-model.initialize(opt)
-print("model was created")
 # Add visualizer?
 
-if opt['reload_model'] is not None:
-    epoch_start = opt['reload_model'].split('_')[-1]
-    epoch_start = int(epoch_start.split('.')[0])
+if opt['reload_model']:
+    if os.path.isfile(opt['reload_model_path']):
+        print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
+        checkpoint = torch.load(opt['reload_model_path'])
+        model.netG.load_state_dict(checkpoint)
+        print("=> loaded checkpoint {}".format(opt['reload_model_name']))
+        epoch_start = opt['reload_model'].split('_')[-1]
+        epoch_start = int(epoch_start.split('.')[0])
+
+    else:
+        print("=> no checkpoint found at '{}'".format(opt['reload_model_name']))
 else:
     epoch_start = 0
-
 
 total_steps = 0
 for epoch in range(epoch_start, opt['niter']):
