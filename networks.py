@@ -390,7 +390,7 @@ class NLayerDiscriminator(nn.Module):
         # else:
         #     use_bias = norm_layer == nn.InstanceNorm2d
         use_bias = False
-        kw = 4
+        kw = 2
         padw = 1
         sequence = [
             nn.Conv2d(input_nc, ndf, kernel_size=kw, stride=2, padding=padw),

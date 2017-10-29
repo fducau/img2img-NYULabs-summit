@@ -29,8 +29,8 @@ import pickle as pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--dataroot_faces', help='path to dataset', default='./data/train/faces/')
-parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/train/hed_edges')
+parser.add_argument('--dataroot_faces', help='path to dataset', default='./data/train/faces_wild_256x256/')
+parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/train/hed_faces_wild')
 parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./data/train/adversarial_faces/')
 parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
 
@@ -108,7 +108,8 @@ if opt['reload_model']:
             opt_experiment = vars(opt_experiment)
         except:
             print('Reloaded opttions dictionary could not be read. Using given optons instead.')
-    opt.update(opt_experiment)
+    if opt_eperiment is not None:
+        opt.update(opt_experiment)
     # Reload last model found in experiment folder if not defined
     if opt['reload_model_name'] is None:
         try:
