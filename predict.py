@@ -29,7 +29,7 @@ import pickle as pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--transform_path', help='path to dataset', default='./data/test/hed_3d_sketches/')
+parser.add_argument('--transform_path', help='path to dataset', default='./data/test/hed_demo/')
 parser.add_argument('--reload_model', help='model to be used for prediction')
 parser.add_argument('--save_folder', help='Path to save predictions')
 
