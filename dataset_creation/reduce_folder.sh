@@ -1,10 +1,10 @@
 #!/bin/bash
-cd ../data/test/pencil/img/
+cd ../data/test/demo/img/
 
 for FILE in *.jpg
 do 
 	echo $FILE
-	convert $FILE -resize 256x256! ../../pencil_256x256/img/$FILE
+	convert $FILE -resize 256x256! ../../demo_256x256/img/$FILE
 done
 
 
