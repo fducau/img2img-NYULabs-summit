@@ -35,7 +35,9 @@ parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./d
 parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
 
 parser.add_argument('--reload_model', type=bool, default=False, help='model to be used for prediction')
-parser.add_argument('--reload_model_name', type=str, help='model to be used for prediction')
+parser.add_argument('--reload_model_netG_name', type=str, help='model to be used for prediction')
+parser.add_argument('--reload_model_netD_name', type=str, help='model to be used for prediction')
+
 parser.add_argument('--reload_options', type=bool, default=True, help='Use the options saved during the training of the model to reload')
 
 parser.add_argument('--workers', type=int, help='number of data loading workers', default=1)
@@ -52,7 +54,7 @@ parser.add_argument('--ngf', type=int, default=64, help='Number of generator fil
 parser.add_argument('--ndf', type=int, default=64, help='# of discrim filters in first conv layer')
 parser.add_argument('--niter', type=int, default=100, help='number of epochs to train for')
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
-parser.add_argument('--lr_update_every', type=int, default=50, help='Number of epochs to update learning rate')
+parser.add_argument('--lr_update_every', type=int, default=15, help='Number of epochs to update learning rate')
 parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.5')
 parser.add_argument('--L1lambda', type=float, default=0.001, help='Loss in generator')
 
@@ -73,20 +75,35 @@ parser.add_argument('--display_freq', type=int, default=100, help='Save images f
 parser.add_argument('--print_freq', type=int, default=50, help='Screen output frequency')
 
 
-def get_all_model_names(opt):
+def get_all_model_names(opt, which='both'):
+    rv = {}
+    if which == 'both' or which == 'netG':
+        experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
+        netG_files = [e for e in experiment_files if 'netG_epoch' in e]
+        rv['netG'] = netG_files
+    if which == 'both' or which == 'netD':
+        experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
+        netD_files = [e for e in experiment_files if 'netD_epoch' in e]
+        rv['netD'] = netD_files
 
-    experiment_files = os.listdir(opt['outf'] + opt['exp_name'])
-    netG_files = [e for e in experiment_files if 'netG_epoch' in e]
+    if which == 'both':
+        return rv
+    return rv[which]
 
-    return netG_files
 
-def get_latest_model_name(opt):
+def get_latest_model_name(opt, which='both'):
+    rv = {}
+    model_files = get_all_model_names(opt, which)
 
-    netG_files = get_all_model_names(opt)
-    candidate_files = [e.split('_')[-1] for e in netG_files]
-    candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
+    for model in ['netG', 'netD']:
+        if which == 'both' or which == model:
+            candidate_files = [e.split('_')[-1] for e in model_files[model]]
+            candidate_files = np.array([int(e.split('.')[0]) for e in candidate_files])
+            rv[model] = model_files[model][candidate_files.argmax()]
 
-    return netG_files[candidate_files.argmax()]
+    if which == 'both':
+        return rv
+    return rv[which]
 
 
 opt = parser.parse_args()
@@ -100,25 +117,37 @@ if opt['reload_model']:
     opt_experiment = None
     try:
         opt_experiment = pkl.load(open(opt['outf'] + opt['exp_name'] + '/options_dictionary.pkl', 'r'))
-    except:
+    except Exception:
         print('Options dictionary could not found in experiment folder {}. Using given options instead.'.format(opt['outf'] + opt['exp_name']))
 
     if not isinstance(opt, dict):
         try:
             opt_experiment = vars(opt_experiment)
-        except:
+        except Exception:
             print('Reloaded opttions dictionary could not be read. Using given optons instead.')
     if opt_eperiment is not None:
         opt.update(opt_experiment)
     # Reload last model found in experiment folder if not defined
-    if opt['reload_model_name'] is None:
+    if opt['reload_model_netG_name'] is None:
         try:
-            reload_model = get_latest_model_name(opt)
-            reload_model_path = opt['outf'] + opt['exp_name'] + '/' + reload_model
-            opt['reload_model'] = reload_model
-            opt['reload_model_path'] = reload_model_path
-        except:
+            reload_model_netG = get_latest_model_name(opt, 'netG')
+            reload_model_G_path = opt['outf'] + opt['exp_name'] + '/' + reload_model_netG
+            opt['reload_model_netG'] = reload_model_netG
+            opt['reload_model_netG_path'] = reload_model_G_path
+        except Exception:
             raise UnboundLocalError('No candidate model found to reload.')
+    else:
+        opt['reload_model_netG_path'] = opt['outf'] + opt['exp_name'] + '/' + reload_model_netG
+    if opt['reload_model_netG_name'] is None:
+        try:
+            reload_model_netD = get_latest_model_name(opt, 'netD')
+            reload_model_D_path = opt['outf'] + opt['exp_name'] + '/' + reload_model_netD
+            opt['reload_model_netD'] = reload_model_netD
+            opt['reload_model_netD_path'] = reload_model_netD
+        except Exception:
+            raise UnboundLocalError('No candidate model found to reload.')
+    else:
+        opt['reload_model_netD_path'] = opt['outf'] + opt['exp_name'] + '/' + reload_model_netD
 
 # Create output folder
 if not os.path.isdir(opt['outf'] + opt['exp_name']):
@@ -200,14 +229,20 @@ dataloader_adv_edges = torch.utils.data.DataLoader(dataset_adv_edges,
 model = netModel()
 model.initialize(opt)
 print("model was created")
-# Add visualizer?
 
 if opt['reload_model']:
-    if os.path.isfile(opt['reload_model_path']):
+    if os.path.isfile(opt['reload_modelG_path']):
+
         print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
-        checkpoint = torch.load(opt['reload_model_path'])
+        checkpoint = torch.load(opt['reload_model_netG_path'])
         model.netG.load_state_dict(checkpoint)
-        print("=> loaded checkpoint {}".format(opt['reload_model_name']))
+        print("=> loaded checkpoint {}".format(opt['reload_model_netG_name']))
+
+        print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
+        checkpoint = torch.load(opt['reload_model_netD_path'])
+        model.netD.load_state_dict(checkpoint)
+        print("=> loaded checkpoint {}".format(opt['reload_model_netG_name']))
+
         epoch_start = opt['reload_model'].split('_')[-1]
         epoch_start = int(epoch_start.split('.')[0])
 
@@ -215,6 +250,7 @@ if opt['reload_model']:
         print("=> no checkpoint found at '{}'".format(opt['reload_model_name']))
 else:
     epoch_start = 0
+
 
 total_steps = 0
 for epoch in range(epoch_start, opt['niter']):
