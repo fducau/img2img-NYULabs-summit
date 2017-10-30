@@ -29,10 +29,8 @@ import pickle as pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', help='experiment name', required=True)
-parser.add_argument('--dataroot_faces', help='path to dataset', default='./data/train/faces_wild_256x256/')
-parser.add_argument('--dataroot_edges', help='path to dataset', default='./data/train/hed_faces_wild')
-parser.add_argument('--dataroot_adv_faces', help='path to dataset', default='./data/train/adversarial_faces/')
-parser.add_argument('--dataroot_adv_edges', help='path to dataset', default='./data/train/adversarial_edges/')
+parser.add_argument('--dataroot_faces', help='path to dataset', default='/home/paperspace/Desktop/data/train/faces_wild_256x256/')
+parser.add_argument('--dataroot_edges', help='path to dataset', default='/home/paperspace/Desktop/data/train/hed_faces_wild')
 
 parser.add_argument('--reload_model', type=bool, default=False, help='model to be used for prediction')
 parser.add_argument('--reload_model_netG_name', type=str, help='model to be used for prediction')
@@ -201,30 +199,13 @@ dataset_edges = dset.ImageFolder(
     ])
 )
 
-dataset_adv_faces = dset.ImageFolder(
-    root=opt['dataroot_adv_faces'],
-    transform=transforms.Compose([transforms.ToTensor()])
-)
 
-dataset_adv_edges = dset.ImageFolder(
-    root=opt['dataroot_adv_edges'],
-    transform=transforms.Compose([transforms.ToTensor()])
-)
 
 dataloader_edges = torch.utils.data.DataLoader(dataset_edges,
                                                batch_size=opt['batchSize'],
                                                shuffle=False,
                                                num_workers=int(opt['workers']))
 
-dataloader_adv_faces = torch.utils.data.DataLoader(dataset_adv_faces,
-                                                   batch_size=opt['batchSize'],
-                                                   shuffle=True,
-                                                   num_workers=int(opt['workers']))
-
-dataloader_adv_edges = torch.utils.data.DataLoader(dataset_adv_edges,
-                                                   batch_size=opt['batchSize'],
-                                                   shuffle=True,
-                                                   num_workers=int(opt['workers']))
 
 model = netModel()
 model.initialize(opt)
