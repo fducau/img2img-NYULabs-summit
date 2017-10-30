@@ -54,7 +54,7 @@ parser.add_argument('--niter', type=int, default=100, help='number of epochs to 
 parser.add_argument('--lr', type=float, default=0.0002, help='learning rate, default=0.0002')
 parser.add_argument('--lr_update_every', type=int, default=15, help='Number of epochs to update learning rate')
 parser.add_argument('--beta1', type=float, default=0.9, help='beta1 for adam. default=0.5')
-parser.add_argument('--L1lambda', type=float, default=0.001, help='Loss in generator')
+parser.add_argument('--L1lambda', type=float, default=0.01, help='Loss in generator')
 
 parser.add_argument('--cuda', action='store_true', help='enables cuda')
 parser.add_argument('--ngpu', type=int, default=1, help='number of GPUs to use')
@@ -84,9 +84,7 @@ def get_all_model_names(opt, which='both'):
         netD_files = [e for e in experiment_files if 'netD_epoch' in e]
         rv['netD'] = netD_files
 
-    if which == 'both':
-        return rv
-    return rv[which]
+    return rv
 
 
 def get_latest_model_name(opt, which='both'):
@@ -123,24 +121,25 @@ if opt['reload_model']:
             opt_experiment = vars(opt_experiment)
         except Exception:
             print('Reloaded opttions dictionary could not be read. Using given optons instead.')
-    if opt_eperiment is not None:
-        opt.update(opt_experiment)
+    # if opt_experiment is not None:
+        # opt.update(opt_experiment)
     # Reload last model found in experiment folder if not defined
     if opt['reload_model_netG_name'] is None:
         try:
             reload_model_netG = get_latest_model_name(opt, 'netG')
             reload_model_G_path = opt['outf'] + opt['exp_name'] + '/' + reload_model_netG
-            opt['reload_model_netG'] = reload_model_netG
+            opt['reload_model_netG_name'] = reload_model_netG
             opt['reload_model_netG_path'] = reload_model_G_path
         except Exception:
+            raise
             raise UnboundLocalError('No candidate model found to reload.')
     else:
         opt['reload_model_netG_path'] = opt['outf'] + opt['exp_name'] + '/' + reload_model_netG
-    if opt['reload_model_netG_name'] is None:
+    if opt['reload_model_netD_name'] is None:
         try:
             reload_model_netD = get_latest_model_name(opt, 'netD')
             reload_model_D_path = opt['outf'] + opt['exp_name'] + '/' + reload_model_netD
-            opt['reload_model_netD'] = reload_model_netD
+            opt['reload_model_netD_name'] = reload_model_netD
             opt['reload_model_netD_path'] = reload_model_netD
         except Exception:
             raise UnboundLocalError('No candidate model found to reload.')
@@ -212,23 +211,26 @@ model.initialize(opt)
 print("model was created")
 
 if opt['reload_model']:
-    if os.path.isfile(opt['reload_modelG_path']):
+    if os.path.isfile(opt['reload_model_netG_path']):
 
-        print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
+        print("=> loading checkpoint '{}'".format(opt['reload_model_netG_name']))
         checkpoint = torch.load(opt['reload_model_netG_path'])
         model.netG.load_state_dict(checkpoint)
         print("=> loaded checkpoint {}".format(opt['reload_model_netG_name']))
-
-        print("=> loading checkpoint '{}'".format(opt['reload_model_name']))
+    else:
+        print("=> no checkpoint found at '{}'".format(opt['reload_model_netG_name']))
+    if os.path.isfile(opt['reload_model_netD_path']):
+        print("=> loading checkpoint '{}'".format(opt['reload_model_netD_name']))
         checkpoint = torch.load(opt['reload_model_netD_path'])
         model.netD.load_state_dict(checkpoint)
-        print("=> loaded checkpoint {}".format(opt['reload_model_netG_name']))
-
-        epoch_start = opt['reload_model'].split('_')[-1]
-        epoch_start = int(epoch_start.split('.')[0])
-
+        print("=> loaded checkpoint {}".format(opt['reload_model_netD_name']))
     else:
-        print("=> no checkpoint found at '{}'".format(opt['reload_model_name']))
+        print("=> no checkpoint found at '{}'".format(opt['reload_model_netD_name']))
+
+    epoch_start = opt['reload_model_netG_name'].split('_')[-1]
+    epoch_start = int(epoch_start.split('.')[0])
+
+
 else:
     epoch_start = 0
 
