@@ -6,6 +6,8 @@ The models implemented are based on:
 * Isola, et al. 2016. Image-to-Image Translation with Conditional Adversarial Networks. [arxiv](https://arxiv.org/abs/1611.07004)
 * Xie, et al. 2015. Holistically-Nested HED Detection. [arxiv](https://arxiv.org/abs/1504.06375)
 
+## Data
+The data used to train the models can be found [here](goo.gl/HrVebr)
 ## Quick Commands
 ### Resize a folder of images
 First edit the input and output folders in [/dataset_creation/reduce_folder.sh](/dataset_creation/reduce_folder.sh).
