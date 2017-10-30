@@ -1,6 +1,7 @@
 # Building & Training an Image-to-Image Generative Model
+Slides for the workshop are [here](/slides_deck.pdf).
 
-The code on this repo is an adaptation of the Pytorch pix2pix implementation ([repo](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix)) and the Tensorflow implementation of HED detector ([repo](https://github.com/harsimrat-eyeem/holy-edge))
+The code on this repo is an adaptation of the Pytorch pix2pix implementation ([repo](https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix)) and the Tensorflow implementation of HED detector ([repo](https://github.com/harsimrat-eyeem/holy-edge)).
 
 The models implemented are based on:
 * Isola, et al. 2016. Image-to-Image Translation with Conditional Adversarial Networks. [arxiv](https://arxiv.org/abs/1611.07004)
