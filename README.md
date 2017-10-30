@@ -51,6 +51,7 @@ Training results and model checkpoints will be saved in `runs/experiment_name`
 
 ## Experiments
 ### CelebA - centered and cropped
+----------------------
 #### No adversarial loss
 ![Alt text](/img/lambda_0.png?raw=true "Optional Title")
 
@@ -83,6 +84,7 @@ Training results and model checkpoints will be saved in `runs/experiment_name`
 ![Alt text](/img/hed-centered-lambda0-01_patch_size.png?raw=true "Optional Title")
 
 ### CelebA - faces in the wild
+-----------------------
 #### HED edges - Lambda 1e-3
 ##### Train Set
 ![Alt text](/img/hed-wild-lambda0-001_patch_size30.png?raw=true "Optional Title")
