@@ -4,7 +4,7 @@
 ## Experiments
 ### CelebA - centered and cropped
 #### No adversarial loss
-![Alt text](/imgs/lambda_0.png?raw=true "Optional Title")
+![Alt text](/img/lambda_0.png?raw=true "Optional Title")
 
 #### Canny edges - Lambda 1e-4
 ##### Train Set
